@@ -1,0 +1,3 @@
+def databaseFunctions(data):
+    
+    pass

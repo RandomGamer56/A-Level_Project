@@ -1,0 +1,79 @@
+FUNCTION register(inUsername,inPassword,inNationality,inContinent)
+	query = "GET playerID 
+		 FROM playerInfo
+		 ORDER BY playerID DESC 
+		 LIMIT 1"
+	CONNECT TO DATABASE
+	output = QUERY THE DATABASE USING query
+	newPlayerID = INT(output[0,0]) + 1
+	newQuery = "INSERT INTO playerInfo
+		 (playerID,username,password,nationality,continent)
+		 VALUES
+		 (+"newPlayerID+","+inUsername+","+inPassword+",
+		 "+inNationality+","+inContinent+")"
+	QUERY THE DATABASE USING newQuery
+	COMMIT CHANGES TO DATABASE
+	CLOSE DATABASE CONNECTION
+ENDFUNCTION
+
+FUNCTION logIn(inUsername,inPassword)
+	query = "SELECT password,playerID
+		 FROM playerInfo
+		 WHERE username = inUsername"
+	CONNECT TO DATABASE
+	output = QUERY THE DATABASE USING query
+	CLOSE DATABASE CONNECTION
+	IF inPassword == output[0,1] THEN
+		return TRUE
+	ELSE
+		return FALSE
+	ENDIF
+ENDFUNCTION
+
+FUNCTION getLeaderboard(inContinent,inTable,inPrefix)
+	query = "SELECT playerInfo.playerID, playerInfo.username, 
+            	playerInfo.nationality, "+inTable+"."+inPrefix+"Kills, "
+            	+inTable+"."+inPrefix+"Deaths, "+inTable+"."+inPrefix+"KD, "
+            	+inTable+"."+inPrefix+"Wins, "+inTable+"."+inPrefix+"Losses, "
+		+inTable+"."+inPrefix+"WL 
+		FROM "+inTable+
+            	"LEFT OUTER JOIN playerInfo
+            	ON playerInfo.playerID = "+inTable+"."+inPrefix+"ID"
+	IF inTable == "Global" THEN
+		query = query + " WHERE playerInfo.continent = "+inContinent+" "
+	ENDIF
+	query = query + "ORDER BY "+inTable+"."+inPrefix+"Wins DESC
+            		 LIMIT 2"
+	CONNECT TO DATABASE
+	output = QUERY THE DATABASE USING query
+	CLOSE DATABASE CONNECTION
+	return output
+
+FUNCTION updateLeaderboard(inPlayerID,inKills,inDeaths,matchResult,inTable,inPrefix)
+	query = "SELECT *
+		 FROM "+inTable+
+		 "WHERE "+inPrefix+"ID = "+inPlayerID
+	CONNECT TO DATABASE
+	output = QUERY THE DATABASE USING query
+	totalKills = output[0,1] + inKills
+	totalDeaths = output[0,2] + inDeaths
+	totalKD = totalKills/totalDeaths
+	IF matchResult == True THEN
+		totalWins = output[0,4] + 1
+		totalLosses = output[0,5]
+	ELSE
+		totalWins = output[0,4]
+		totalLosses = output[0,5] + 1
+	ENDIF
+	totalWL = totalWins/totalLosses
+	newQuery = "UPDATE "+inTable+
+		    "SET "+inPrefixKills+" = "+totalKills+", "+inPrefixDeaths+" = "+totalDeaths+", "+
+		    +inPrefixKD+" = "+totalKD+", "+inPrefixWins+" = "+totalWins+", "
+		    +inPrefixLosses+" = "+totalLosses+", "+inPrefixWL+" = "+totalWL
+		    +"WHERE "+inPrefixID+" = "+inPlayerID
+
+	QUERY THE DATABASE USING newQuery
+	COMMIT CHANGES TO DATABASE
+	CLOSE DATABASE CONNECTION
+ENDFUNCTION
+
